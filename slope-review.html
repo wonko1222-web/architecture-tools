@@ -1,0 +1,576 @@
+
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>경사도 검토도구</title>
+<style>
+:root {
+  --primary:#2457a6;
+  --primary-light:#edf4ff;
+  --bg:#f4f6fa;
+  --card:#ffffff;
+  --text:#202938;
+  --muted:#6b7280;
+  --border:#e1e6ef;
+  --green:#168451;
+  --red:#d13c3c;
+  --orange:#bd7914;
+}
+* {box-sizing:border-box}
+body {
+  margin:0;padding:24px 14px;background:var(--bg);color:var(--text);
+  font-family:"Malgun Gothic",Arial,sans-serif;line-height:1.6;
+}
+.container {max-width:1180px;margin:auto}
+header {margin-bottom:22px}
+h1 {font-size:25px;margin:0 0 5px}
+.subtitle {color:var(--muted);font-size:14px}
+.tabs {display:flex;gap:8px;margin-bottom:20px;border-bottom:1px solid var(--border)}
+.tab {
+  border:1px solid var(--border);background:#fff;color:var(--muted);
+  padding:12px 22px;border-radius:9px 9px 0 0;cursor:pointer;font-weight:700;
+}
+.tab.active {background:var(--primary);color:white;border-color:var(--primary)}
+.panel {display:none}
+.panel.active {display:block}
+.card {
+  background:var(--card);border:1px solid var(--border);border-radius:12px;
+  padding:22px;margin-bottom:17px;box-shadow:0 2px 7px rgba(20,40,70,.035);
+}
+.card h2 {font-size:18px;margin:0 0 16px}
+.card h3 {font-size:15px;margin:18px 0 9px}
+.desc {font-size:13px;color:var(--muted);margin-top:-8px}
+.grid {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.grid.three {grid-template-columns:repeat(3,minmax(0,1fr))}
+.field {margin-bottom:13px}
+label {display:block;font-size:13px;font-weight:700;margin-bottom:6px}
+input,select {
+  width:100%;padding:11px 12px;border:1px solid var(--border);
+  border-radius:7px;font-size:15px;background:white;color:var(--text);
+}
+input:focus,select:focus {outline:2px solid #c8dcff;border-color:var(--primary)}
+button {border:0;border-radius:7px;padding:11px 17px;cursor:pointer;font-size:14px;font-weight:700}
+.btn {background:var(--primary);color:white}
+.btn-sub {background:#e9edf4;color:#344054}
+.btn-row {display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.result {
+  display:none;background:var(--primary-light);border:1px solid #cbdcf8;
+  border-radius:9px;padding:16px;margin-top:15px;
+}
+.result.show {display:block}
+.result-title {font-weight:700;color:var(--primary);margin-bottom:10px}
+.result-grid {display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.result-item {background:white;padding:12px;border-radius:7px;border:1px solid #dce6f5}
+.result-item small {display:block;color:var(--muted);font-size:12px}
+.result-item strong {font-size:19px;display:block;margin-top:3px}
+.notice {
+  background:#fff8e9;border-left:4px solid var(--orange);padding:12px 14px;
+  border-radius:5px;font-size:13px;margin-top:13px;
+}
+.info {background:#f5f7fa;border-radius:8px;padding:13px 15px;font-size:13px}
+table {width:100%;border-collapse:collapse;font-size:13px}
+th,td {padding:10px 8px;border-bottom:1px solid var(--border);text-align:center}
+th {background:#f3f6fa;font-weight:700}
+.table-wrap {overflow-x:auto}
+.standard-list {padding-left:20px;margin:0}
+.standard-list li {margin:7px 0}
+.formula {background:#f5f7fa;padding:12px;border-radius:7px;font-weight:700;margin:8px 0}
+hr {border:0;border-top:1px solid var(--border);margin:20px 0}
+@media(max-width:720px) {
+  body {padding:15px 10px}
+  .grid,.grid.three,.result-grid {grid-template-columns:1fr}
+  .tab {flex:1;padding:10px 5px;font-size:13px}
+  .card {padding:16px}
+  h1 {font-size:21px}
+}
+</style>
+</head>
+<body>
+<div class="container">
+
+<header>
+  <h1>경사도 검토도구</h1>
+  <div class="subtitle">경사 수치 환산 및 경사 기준 검토</div>
+</header>
+
+<div class="tabs">
+  <button class="tab active" onclick="showTab('quick',this)">경사 수치 바로보기</button>
+  <button class="tab" onclick="showTab('review',this)">경사 계산·검토</button>
+</div>
+
+<!-- 첫 번째 탭: 기존 구성 유지 -->
+<section id="quick" class="panel active">
+
+  <div class="card">
+    <h2>① 경사 수치 입력 및 단위 환산</h2>
+    <p class="desc">경사율(%), 기울기(1/n), 경사각(°) 중 하나를 입력하면 나머지 수치로 환산합니다.</p>
+    <div class="grid">
+      <div class="field">
+        <label>경사 수치</label>
+        <input id="quickValue" type="number" min="0" step="any" placeholder="예: 9">
+      </div>
+      <div class="field">
+        <label>입력 단위</label>
+        <select id="quickUnit">
+          <option value="percent">경사율 (%)</option>
+          <option value="ratio">기울기 (1/n) - 분모 입력</option>
+          <option value="degree">경사각 (°)</option>
+        </select>
+      </div>
+    </div>
+    <div class="btn-row">
+      <button class="btn" onclick="calculateQuick()">환산하기</button>
+      <button class="btn-sub" onclick="resetQuick()">초기화</button>
+    </div>
+    <div id="quickResult" class="result">
+      <div class="result-title">환산 결과</div>
+      <div class="result-grid">
+        <div class="result-item"><small>경사율</small><strong id="quickPercent">-</strong></div>
+        <div class="result-item"><small>기울기</small><strong id="quickRatio">-</strong></div>
+        <div class="result-item"><small>경사각</small><strong id="quickDegree">-</strong></div>
+      </div>
+      <div class="notice" id="quickExplanation"></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>② 한 가지 값만 알고 있을 때</h2>
+    <p class="desc">경사 수치를 기준으로 수평거리 또는 수직 높이차를 계산합니다.</p>
+    <div class="grid">
+      <div class="field">
+        <label>경사 기준</label>
+        <select id="singleStandard">
+          <option value="percent">경사율 (%)</option>
+          <option value="ratio">기울기 (1/n) - 분모 입력</option>
+          <option value="degree">경사각 (°)</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>경사 수치</label>
+        <input id="singleValue" type="number" min="0" step="any" placeholder="예: 9">
+      </div>
+    </div>
+    <hr>
+    <div class="grid">
+      <div>
+        <h3>수평거리만 알고 있는 경우</h3>
+        <div class="field">
+          <label>수평거리 (m)</label>
+          <input id="horizontalOnly" type="number" min="0" step="any" placeholder="예: 10">
+        </div>
+        <button class="btn" onclick="calculateHeight()">수직 높이차 계산</button>
+        <div id="heightResult" class="result">
+          <div class="result-title">계산 결과</div>
+          <div class="result-grid">
+            <div class="result-item"><small>수평거리</small><strong id="heightHorizontal">-</strong></div>
+            <div class="result-item"><small>수직 높이차</small><strong id="heightVertical">-</strong></div>
+            <div class="result-item"><small>경사율</small><strong id="heightPercent">-</strong></div>
+          </div>
+        </div>
+      </div>
+      <div>
+        <h3>수직 높이차만 알고 있는 경우</h3>
+        <div class="field">
+          <label>수직 높이차 (m)</label>
+          <input id="verticalOnly" type="number" min="0" step="any" placeholder="예: 0.9">
+        </div>
+        <button class="btn" onclick="calculateHorizontal()">수평거리 계산</button>
+        <div id="horizontalResult" class="result">
+          <div class="result-title">계산 결과</div>
+          <div class="result-grid">
+            <div class="result-item"><small>수직 높이차</small><strong id="horizontalVertical">-</strong></div>
+            <div class="result-item"><small>필요 수평거리</small><strong id="horizontalDistance">-</strong></div>
+            <div class="result-item"><small>경사율</small><strong id="horizontalPercent">-</strong></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>③ 수평거리와 수직 높이차를 모두 알고 있을 때</h2>
+    <p class="desc">실제 설계도면의 수평거리와 높이차를 입력하여 경사 수치를 확인합니다.</p>
+    <div class="grid">
+      <div class="field">
+        <label>수평거리 (m)</label>
+        <input id="actualHorizontal" type="number" min="0" step="any" placeholder="예: 10">
+      </div>
+      <div class="field">
+        <label>수직 높이차 (m)</label>
+        <input id="actualVertical" type="number" min="0" step="any" placeholder="예: 0.9">
+      </div>
+    </div>
+    <button class="btn" onclick="calculateActual()">경사 수치 계산</button>
+    <div id="actualResult" class="result">
+      <div class="result-title">실제 경사 계산 결과</div>
+      <div class="result-grid">
+        <div class="result-item"><small>경사율</small><strong id="actualPercent">-</strong></div>
+        <div class="result-item"><small>기울기</small><strong id="actualRatio">-</strong></div>
+        <div class="result-item"><small>경사각</small><strong id="actualDegree">-</strong></div>
+      </div>
+      <div class="notice" id="actualExplanation"></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>④ 계산 기본 개념</h2>
+    <div class="formula">경사율(%) = (수직 높이차 ÷ 수평거리) × 100</div>
+    <div class="formula">기울기(1/n) = 수평거리 ÷ 수직 높이차</div>
+    <div class="formula">경사각(°) = arctan(수직 높이차 ÷ 수평거리)</div>
+    <div class="notice">
+      모든 계산은 경사면 길이가 아닌 <b>수평거리</b>를 기준으로 합니다.
+      예를 들어 경사율 9%는 수평거리 1m당 수직 높이차가 0.09m(9cm)라는 의미입니다.
+    </div>
+  </div>
+</section>
+
+<!-- 두 번째 탭: 기존 검토기준 및 계산기 유지 -->
+<section id="review" class="panel">
+
+  <div class="card">
+    <h2>① 기준 설정</h2>
+    <div class="grid">
+      <div class="field">
+        <label>검토 기준 선택</label>
+        <select id="standardSelect" onchange="changeStandard()">
+          <option value="access">장애인 접근로 - 1/18</option>
+          <option value="accessRelax">장애인 접근로 완화 - 1/12</option>
+          <option value="ramp">장애인 경사로 - 1/12</option>
+          <option value="rampRelax">기존시설 경사로 완화 - 1/8</option>
+          <option value="parkingDisabled">장애인전용주차구역 - 2%</option>
+          <option value="bath">장애인 이용 욕실 - 1/30</option>
+          <option value="parkingStraight">주차장 직선 경사로 - 17%</option>
+          <option value="parkingCurve">주차장 곡선 경사로 - 14%</option>
+          <option value="parkingStraightJoin">주차장 직선 경사로 접속부 - 8.5%</option>
+          <option value="parkingCurveJoin">주차장 곡선 경사로 접속부 - 7%</option>
+          <option value="roof">옥상 배수구배 - 1/50</option>
+          <option value="toilet">화장실 배수구배 - 1/100</option>
+          <option value="balcony">발코니 배수구배 - 1/150</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>기준 수치</label>
+        <input id="standardValue" type="number" value="18" min="0" step="any">
+      </div>
+      <div class="field">
+        <label>기준 단위</label>
+        <select id="standardUnit" onchange="updateStandardFromUnit()">
+          <option value="ratio">기울기 (1/n)</option>
+          <option value="percent">경사율 (%)</option>
+          <option value="degree">경사각 (°)</option>
+        </select>
+      </div>
+    </div>
+    <div class="info" id="standardInfo">선택한 기준을 적용하여 경사 적합 여부를 검토합니다.</div>
+  </div>
+
+  <div class="card">
+    <h2>② 계산 방법</h2>
+    <div class="field">
+      <label>계산 유형</label>
+      <select id="calcMode" onchange="changeMode()">
+        <option value="height">수평거리 → 허용 수직 높이차</option>
+        <option value="distance">수직 높이차 → 필요 수평거리</option>
+        <option value="check">실제 경사 적합 여부</option>
+        <option value="convert">경사 수치 환산</option>
+      </select>
+    </div>
+    <div id="calcInputs"></div>
+    <div class="btn-row">
+      <button class="btn" onclick="calculate()">계산하기</button>
+      <button class="btn-sub" onclick="resetCalculator()">초기화</button>
+    </div>
+    <div id="calcResult" class="result"></div>
+  </div>
+
+  <!-- 기존 관련 기준을 계산·검토 탭 하단으로 이동 -->
+  <div class="card">
+    <h2>③ 장애인 편의시설 경사 기준</h2>
+    <ul class="standard-list">
+      <li><b>장애인 접근로:</b> 일반적으로 기울기 1/18 이하 기준 검토</li>
+      <li><b>접근로 완화:</b> 지형 및 구조적 조건에 따른 완화기준 확인</li>
+      <li><b>장애인 경사로:</b> 기울기 1/12 이하 기준 검토</li>
+      <li><b>기존시설 완화:</b> 적용 요건 및 세부 예외 규정 확인</li>
+      <li><b>장애인전용주차구역:</b> 주차구역의 평탄성 및 경사 기준 확인</li>
+      <li><b>욕실·샤워실:</b> 바닥 물 빠짐을 위한 배수구배 확인</li>
+    </ul>
+    <div class="notice">경사 기준 외에도 유효폭, 손잡이, 바닥 마감, 참 설치, 단차 및 회전공간 등 관련 세부기준을 함께 검토해야 합니다.</div>
+  </div>
+
+  <div class="card">
+    <h2>④ 주차장 경사 기준</h2>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>구분</th><th>경사 기준</th><th>비고</th></tr></thead>
+        <tbody>
+          <tr><td>직선 차로</td><td>17%</td><td>기준 적용 조건 확인</td></tr>
+          <tr><td>곡선 차로</td><td>14%</td><td>곡선부 기준 확인</td></tr>
+          <tr><td>직선 접속부</td><td>8.5%</td><td>접속부 완화 검토</td></tr>
+          <tr><td>곡선 접속부</td><td>7%</td><td>접속부 완화 검토</td></tr>
+          <tr><td>장애인전용주차구역</td><td>2%</td><td>평탄성 확인</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="notice">주차장법령 및 해당 지방자치단체 조례의 적용 대상, 차로 구분, 접속부 길이 등 세부 요건을 확인해야 합니다.</div>
+  </div>
+
+  <div class="card">
+    <h2>⑤ 도로 및 보행로 경사 기준</h2>
+    <ul class="standard-list">
+      <li>종단경사와 횡단경사를 구분하여 검토</li>
+      <li>보행로의 배수 방향 및 물고임 여부 확인</li>
+      <li>교차부·진출입부의 단차 및 경사 변화 확인</li>
+      <li>장애인 접근로와 일반 보행로의 기준 구분</li>
+      <li>도로 구조 및 관련 설계기준 적용 여부 확인</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <h2>⑥ 옥상·화장실·발코니 배수 구배</h2>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>구분</th><th>참고 기울기</th><th>경사율</th></tr></thead>
+        <tbody>
+          <tr><td>옥상</td><td>1/50</td><td>2%</td></tr>
+          <tr><td>화장실·세탁실</td><td>1/100</td><td>1%</td></tr>
+          <tr><td>발코니</td><td>1/150</td><td>약 0.667%</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="notice">배수구배는 설계 목적과 방수·배수 상세, 마감재 및 관련 시방서 등을 함께 확인해야 합니다.</div>
+  </div>
+
+  <div class="card">
+    <h2>⑦ 설계도서 검토 시 주요 확인사항</h2>
+    <ul class="standard-list">
+      <li>경사율 산정 시 수평거리를 기준으로 계산했는지 확인</li>
+      <li>평면도와 단면도의 거리·높이차가 일치하는지 확인</li>
+      <li>경사로 시작점과 끝점의 표고 및 길이 확인</li>
+      <li>접속부 및 경사 변화 구간의 별도 기준 확인</li>
+      <li>배수 방향과 물고임 발생 가능성 확인</li>
+      <li>법령상 완화기준 적용 시 적용 요건 및 근거 확인</li>
+      <li>도면의 치수와 산출 근거가 명확하게 표시되었는지 확인</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <h2>⑧ 자주 사용하는 경사 수치별 환산표</h2>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>경사율</th><th>기울기</th><th>경사각</th><th>1m당 높이차</th><th>10m당 높이차</th></tr></thead>
+        <tbody id="conversionTable"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>⑨ 경사 계산 기본 개념</h2>
+    <div class="formula">경사율(%) = (수직 높이차 ÷ 수평거리) × 100</div>
+    <div class="formula">기울기(1/n) = 수평거리 ÷ 수직 높이차</div>
+    <div class="formula">경사각(°) = arctan(수직 높이차 ÷ 수평거리)</div>
+    <div class="info">
+      <b>예시: 경사율 9%</b><br>
+      수평거리 1m당 높이차: 0.09m(9cm)<br>
+      수평거리 10m당 높이차: 0.9m<br>
+      기울기: 약 1/11.111<br>
+      경사각: 약 5.143°
+    </div>
+    <div class="notice">1/12와 12%는 서로 같은 값이 아닙니다. 1/12는 약 8.333%이며, 12%는 약 1/8.333입니다.</div>
+  </div>
+
+</section>
+</div>
+
+<script>
+const standards = {
+  access:{text:"1/18",percent:100/18},
+  accessRelax:{text:"1/12",percent:100/12},
+  ramp:{text:"1/12",percent:100/12},
+  rampRelax:{text:"1/8",percent:12.5},
+  parkingDisabled:{text:"2%",percent:2},
+  bath:{text:"1/30",percent:100/30},
+  parkingStraight:{text:"17%",percent:17},
+  parkingCurve:{text:"14%",percent:14},
+  parkingStraightJoin:{text:"8.5%",percent:8.5},
+  parkingCurveJoin:{text:"7%",percent:7},
+  roof:{text:"1/50",percent:2},
+  toilet:{text:"1/100",percent:1},
+  balcony:{text:"1/150",percent:100/150}
+};
+
+function showTab(id,button) {
+  document.querySelectorAll(".panel").forEach(p=>p.classList.remove("active"));
+  document.querySelectorAll(".tab").forEach(t=>t.classList.remove("active"));
+  document.getElementById(id).classList.add("active");
+  button.classList.add("active");
+}
+
+function fmt(n,d=3) {
+  return Number(n).toFixed(d).replace(/\.?0+$/,"");
+}
+function angleFromPercent(p) {
+  return Math.atan(p/100)*180/Math.PI;
+}
+function ratioFromPercent(p) {
+  return 100/p;
+}
+function getPercent(value,unit) {
+  if(unit==="percent") return value;
+  if(unit==="ratio") return 100/value;
+  if(unit==="degree") return Math.tan(value*Math.PI/180)*100;
+  return null;
+}
+function readNumber(id) {
+  const value=Number(document.getElementById(id).value);
+  return Number.isFinite(value) && value>0 ? value : null;
+}
+function setResult(id,show=true) {
+  document.getElementById(id).classList.toggle("show",show);
+}
+
+/* 첫 번째 탭 기능 */
+function calculateQuick() {
+  const raw=readNumber("quickValue");
+  if(raw===null){alert("올바른 경사 수치를 입력하세요.");return;}
+  const percent=getPercent(raw,document.getElementById("quickUnit").value);
+  if(!Number.isFinite(percent)||percent<=0){alert("올바른 경사 수치를 입력하세요.");return;}
+  const one=percent/100;
+  document.getElementById("quickPercent").textContent=fmt(percent,4)+"%";
+  document.getElementById("quickRatio").textContent="1/"+fmt(ratioFromPercent(percent),3);
+  document.getElementById("quickDegree").textContent=fmt(angleFromPercent(percent),3)+"°";
+  document.getElementById("quickExplanation").textContent=
+    "수평거리 1m당 수직 높이차는 "+fmt(one,4)+"m ("+
+    fmt(one*100,2)+"cm)이며, 10m 이동 시 "+fmt(one*10,4)+"m입니다.";
+  setResult("quickResult");
+}
+function resetQuick() {
+  document.getElementById("quickValue").value="";
+  document.getElementById("quickUnit").value="percent";
+  setResult("quickResult",false);
+}
+function getSinglePercent() {
+  const raw=readNumber("singleValue");
+  if(raw===null){alert("경사 수치를 입력하세요.");return null;}
+  const p=getPercent(raw,document.getElementById("singleStandard").value);
+  if(!Number.isFinite(p)||p<=0){alert("올바른 경사 수치를 입력하세요.");return null;}
+  return p;
+}
+function calculateHeight() {
+  const p=getSinglePercent(),h=readNumber("horizontalOnly");
+  if(p===null)return;
+  if(h===null){alert("수평거리를 입력하세요.");return;}
+  const v=h*p/100;
+  document.getElementById("heightHorizontal").textContent=fmt(h,4)+"m";
+  document.getElementById("heightVertical").textContent=fmt(v,4)+"m";
+  document.getElementById("heightPercent").textContent=fmt(p,4)+"%";
+  setResult("heightResult");
+}
+function calculateHorizontal() {
+  const p=getSinglePercent(),v=readNumber("verticalOnly");
+  if(p===null)return;
+  if(v===null){alert("수직 높이차를 입력하세요.");return;}
+  const h=v/(p/100);
+  document.getElementById("horizontalVertical").textContent=fmt(v,4)+"m";
+  document.getElementById("horizontalDistance").textContent=fmt(h,4)+"m";
+  document.getElementById("horizontalPercent").textContent=fmt(p,4)+"%";
+  setResult("horizontalResult");
+}
+function calculateActual() {
+  const h=readNumber("actualHorizontal"),v=readNumber("actualVertical");
+  if(h===null||v===null){alert("수평거리와 수직 높이차를 모두 입력하세요.");return;}
+  const p=v/h*100;
+  document.getElementById("actualPercent").textContent=fmt(p,4)+"%";
+  document.getElementById("actualRatio").textContent="1/"+fmt(ratioFromPercent(p),3);
+  document.getElementById("actualDegree").textContent=fmt(angleFromPercent(p),3)+"°";
+  document.getElementById("actualExplanation").textContent=
+    "수평거리 "+fmt(h,4)+"m, 수직 높이차 "+fmt(v,4)+"m를 기준으로 계산한 결과입니다.";
+  setResult("actualResult");
+}
+
+/* 두 번째 탭 기존 기준 및 계산 기능 */
+function changeStandard() {
+  const key=document.getElementById("standardSelect").value;
+  const s=standards[key];
+  document.getElementById("standardValue").value=
+    s.text.includes("%") ? parseFloat(s.text) : ratioFromPercent(s.percent);
+  document.getElementById("standardUnit").value=
+    s.text.includes("%") ? "percent" : "ratio";
+  document.getElementById("standardInfo").textContent=
+    "선택 기준: "+s.text+" / 경사율 "+fmt(s.percent,4)+"%";
+}
+function updateStandardFromUnit() {
+  const p=readNumber("standardValue");
+  if(p===null)return;
+  const unit=document.getElementById("standardUnit").value;
+  const percent=getPercent(p,unit);
+  document.getElementById("standardInfo").textContent=
+    "입력 기준 경사율: "+fmt(percent,4)+"%";
+}
+function changeMode() {
+  const mode=document.getElementById("calcMode").value;
+  let html="";
+  if(mode==="height") {
+    html='<div class="field"><label>수평거리 (m)</label><input id="calcHorizontal" type="number" min="0" step="any" placeholder="예: 10"></div>';
+  } else if(mode==="distance") {
+    html='<div class="field"><label>수직 높이차 (m)</label><input id="calcVertical" type="number" min="0" step="any" placeholder="예: 0.9"></div>';
+  } else if(mode==="check") {
+    html='<div class="grid"><div class="field"><label>수평거리 (m)</label><input id="calcHorizontal" type="number" min="0" step="any"></div><div class="field"><label>수직 높이차 (m)</label><input id="calcVertical" type="number" min="0" step="any"></div></div>';
+  } else {
+    html='<div class="grid"><div class="field"><label>입력 수치</label><input id="calcValue" type="number" min="0" step="any"></div><div class="field"><label>입력 단위</label><select id="calcUnit"><option value="percent">경사율 (%)</option><option value="ratio">기울기 (1/n) - 분모 입력</option><option value="degree">경사각 (°)</option></select></div></div>';
+  }
+  document.getElementById("calcInputs").innerHTML=html;
+  setResult("calcResult",false);
+}
+function calculate() {
+  const mode=document.getElementById("calcMode").value;
+  const raw=readNumber("standardValue");
+  if(raw===null){alert("기준 수치를 입력하세요.");return;}
+  const standardPercent=getPercent(raw,document.getElementById("standardUnit").value);
+  if(!Number.isFinite(standardPercent)||standardPercent<=0){alert("올바른 기준 수치를 입력하세요.");return;}
+  let html="";
+  if(mode==="height") {
+    const h=readNumber("calcHorizontal");
+    if(h===null){alert("수평거리를 입력하세요.");return;}
+    html="<div class='result-title'>허용 수직 높이차</div><b>"+fmt(h*standardPercent/100,4)+"m</b><br>수평거리 "+fmt(h,3)+"m 기준";
+  } else if(mode==="distance") {
+    const v=readNumber("calcVertical");
+    if(v===null){alert("수직 높이차를 입력하세요.");return;}
+    html="<div class='result-title'>필요 수평거리</div><b>"+fmt(v/(standardPercent/100),4)+"m</b><br>수직 높이차 "+fmt(v,3)+"m 기준";
+  } else if(mode==="check") {
+    const h=readNumber("calcHorizontal"),v=readNumber("calcVertical");
+    if(h===null||v===null){alert("수평거리와 수직 높이차를 입력하세요.");return;}
+    const actual=v/h*100,pass=actual<=standardPercent;
+    html="<div class='result-title'>경사 적합 여부</div><b style='color:"+(pass?"#168451":"#d13c3c")+"'>"+(pass?"적합":"부적합")+"</b><br>"+
+      "실제 경사율: "+fmt(actual,4)+"%<br>적용 기준: "+fmt(standardPercent,4)+"%<br>"+
+      "기울기: 1/"+fmt(ratioFromPercent(actual),3)+"<br>경사각: "+fmt(angleFromPercent(actual),3)+"°";
+  } else {
+    const value=readNumber("calcValue");
+    if(value===null){alert("환산할 수치를 입력하세요.");return;}
+    const p=getPercent(value,document.getElementById("calcUnit").value);
+    html="<div class='result-title'>경사 수치 환산</div>"+
+      "경사율: <b>"+fmt(p,4)+"%</b><br>"+
+      "기울기: <b>1/"+fmt(ratioFromPercent(p),3)+"</b><br>"+
+      "경사각: <b>"+fmt(angleFromPercent(p),3)+"°</b>";
+  }
+  document.getElementById("calcResult").innerHTML=html;
+  setResult("calcResult");
+}
+function resetCalculator() {changeMode();}
+function renderConversionTable() {
+  const values=[1,2,3,5,7,8.5,9,10,12.5,14,17];
+  document.getElementById("conversionTable").innerHTML=values.map(p=>
+    "<tr><td>"+fmt(p,3)+"%</td>"+
+    "<td>1/"+fmt(ratioFromPercent(p),3)+"</td>"+
+    "<td>"+fmt(angleFromPercent(p),3)+"°</td>"+
+    "<td>"+fmt(p/100,4)+"m</td>"+
+    "<td>"+fmt(p/10,4)+"m</td></tr>"
+  ).join("");
+}
+changeStandard();
+changeMode();
+renderConversionTable();
+</script>
+</body>
+</html>
